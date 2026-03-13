@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es"> <!-- Cambiado a Español -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Honda Gravitacional v9.3 - Diseño Corregido</title> <!-- Título actualizado -->
+    <style>
+        /* CSS permanece idéntico a la versión anterior */
+        body { margin: 0; overflow: hidden; background-color: #2a2f4d; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #e0e0e0; }
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        #wrapper { position: relative; width: 100%; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        #game-container { position: relative; width: 100%; height: 100%; background-color: #1c1f33; overflow: hidden; display: flex; }
+        canvas { display: block; cursor: pointer; width: 100%; height: 100%; }
+        #credit-link { position: absolute; bottom: -25px; right: 0px; font-size: 0.75em; color: #7a80a0; text-decoration: none; transition: color 0.2s ease; z-index: 5; }
+        #ui-controls { position: absolute; top: 10px; left: 10px; background-color: rgba(42, 47, 77, 0.6); padding: 10px; border-radius: 5px; font-size: 0.9em; min-width: 150px; z-index: 10; pointer-events: none; }
+        #ui-controls div { margin-bottom: 4px; }
+        #high-score-display { margin-top: 8px; font-weight: bold; color: #aaffee; }
+        #splash-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(28, 31, 51, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; cursor: pointer; text-align: center; padding: 20px; box-sizing: border-box; }
+        #splash-title { font-family: 'Orbitron', 'Segoe UI', sans-serif; font-size: 3em; font-weight: 500; color: #aaffee; text-shadow: 0 0 8px rgba(170, 255, 238, 0.5); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 20px; }
+        #splash-story { font-size: 1.2em; font-style: italic; color: #d0d8f0; max-width: 80%; margin-bottom: 30px; line-height: 1.6; }
+        #splash-instructions { font-family: 'Courier New', Courier, monospace; font-size: 0.9em; color: #a0a8c0; line-height: 1.5; max-width: 80%; border-top: 1px solid rgba(170, 255, 238, 0.2); padding-top: 15px; margin-top: 15px; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap');
+        #message { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(70, 80, 120, 0.9); color: #ffffff; padding: 12px 25px; border-radius: 5px; font-size: 1.1em; text-align: center; display: none; white-space: pre-wrap; z-index: 10; pointer-events: none; }
+        .success { background-color: rgba(90, 150, 90, 0.9) !important; }
+        .failure { background-color: rgba(180, 80, 80, 0.9) !important; }
+        body.game-active {}
+        .game-active #game-container { width: auto; height: auto; max-width: calc(min(90vw, 800px)); max-height: calc(min(80vh, 600px)); border: 1px solid #5a6080; box-shadow: 0 0 20px rgba(0, 0, 0, 0.3); }
+        .game-active canvas { width: auto; height: auto; }
+        .game-active #splash-screen { display: none; }
+        @media (max-width: 768px) { body.game-active {} .game-active #game-container { width: 100vw; height: 100vh; max-width: none; max-height: none; border: none; box-shadow: none; display: block; } .game-active canvas { width: 100%; height: 100%; } .game-active #credit-link { position: absolute; bottom: auto; top: 5px; right: 10px; color: #a0a8d0; z-index: 15; background: rgba(28, 31, 51, 0.3); padding: 1px 4px; border-radius: 2px; } body:not(.game-active) #credit-link { position: absolute; bottom: auto; top: 5px; right: 10px; color: #a0a8d0; z-index: 15; background: rgba(28, 31, 51, 0.3); padding: 1px 4px; border-radius: 2px; } }
+        #credit-link:hover { color: #c0c8f0; }
+    </style>
+</head>
+<body>
+    <div id="wrapper">
+        <div id="game-container">
+            <canvas id="gameCanvas"></canvas>
+            <div id="ui-controls">
+                <div>Estado: <span id="status">--</span></div> <!-- Traducido -->
+                <div>Velocidad: <span id="speed-display">--</span></div> <!-- Traducido -->
+                <div>Ángulo: <span id="angle-display">--</span>°</div> <!-- Traducido -->
+                <div id="high-score-display">Récord: <span id="high-score-value">0</span></div> <!-- Traducido -->
+            </div>
+            <div id="message"></div>
+        </div>
+         <a id="credit-link" href="https://www.ylmaspace.es" target="_blank" rel="noopener noreferrer">www.ylmaspace.es</a>
+    </div>
+    <div id="splash-screen">
+        <div id="splash-title">Honda Gravitacional</div> <!-- Traducido -->
+        <!-- --- Historia añadida --- -->
+        <div id="splash-story">
+            Salto completado... Por fin has alcanzado la singularidad legendaria que conecta nuevos mundos. Sin embargo, los motores solo pueden realizar un último impulso corto; cada fragmento de energía es valioso. Debes usar hábilmente la gravedad del planeta cercano para propulsar con precisión tu nave hacia la anomalía...
+        </div>
+        <div id="splash-instructions">
+            [Instrucciones]<br>
+            Arrastra la nave para lanzar, usa la gravedad para alcanzar el objetivo.<br>
+            Velocidad baja = Menos energía = Puntuación alta!<br>
+            La dificultad y combos también aumentan la puntuación. Fallar 5 intentos reinicia la puntuación.<br>
+            (El récord se reinicia diariamente)<br><br>
+            <em>🔊 Activa el audio para una mejor experiencia</em>
+        </div>
+        
+        <!-- Audio Elements -->
+        <audio id=\"backgroundMusic\" loop>
+            <!-- Música de fondo espacial -->
+        </audio>
+        
+        <audio id=\"deathSound\" preload=\"auto\">
+            <!-- Sonido de fallo/muerte -->
+        </audio>
+        
+        <audio id=\"victorySound\" preload=\"auto\">
+            <!-- Sonido de trompetas/victoria -->
+        </audio>
+    </div>
+
+    <script>
+        // Constants and References
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const splashScreen = document.getElementById('splash-screen');
+        const uiStatus = document.getElementById('status');
+        const uiSpeed = document.getElementById('speed-display');
+        const uiAngle = document.getElementById('angle-display');
+        const messageDiv = document.getElementById('message');
+        const uiHighScoreValue = document.getElementById('high-score-value');
+        const bodyElement = document.body;
+        const gameContainer = document.getElementById('game-container');
+        
+        // Audio Context for generated sounds
+        let audioContext = null;
+        let backgroundMusicSource = null;
+        
+        // Initialize Audio Context
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+        
+        // Create background music with generated tones
+        function createBackgroundMusic() {
+            const ctx = initAudioContext();
+            if (!ctx) return;
+            
+            // Stop previous music if playing
+            if (backgroundMusicSource) {
+                backgroundMusicSource.stop();
+            }
+            
+            // Create ambient space music with low frequencies
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(55, ctx.currentTime); // Low bass note (A1)
+            oscillator.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 8); // Gradual rise
+            oscillator.frequency.exponentialRampToValueAtTime(55, ctx.currentTime + 16); // Back down
+            
+            gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 4);
+            gainNode.gain.exponentialRampToValueAtTime(0.1, ctx.currentTime + 8);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            oscillator.start();
+            backgroundMusicSource = oscillator;
+            
+            // Create a looping effect
+            setTimeout(() => {
+                if (gameState !== 'splash') {
+                    createBackgroundMusic();
+                }
+            }, 16000);
+        }
+        
+        // Create death sound effect
+        function playDeathSound() {
+            const ctx = initAudioContext();
+            if (!ctx) return;
+            
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(200, ctx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.5);
+            
+            gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            oscillator.start();
+            oscillator.stop(ctx.currentTime + 0.5);
+        }
+        
+        // Create victory sound (trumpet-like)
+        function playVictorySound() {
+            const ctx = initAudioContext();
+            if (!ctx) return;
+            
+            // Create a trumpet-like fanfare
+            const frequencies = [262, 330, 392, 523]; // C4, E4, G4, C5
+            const startTime = ctx.currentTime;
+            
+            frequencies.forEach((freq, index) => {
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(freq, startTime + index * 0.2);
+                
+                gainNode.gain.setValueAtTime(0.2, startTime + index * 0.2);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + index * 0.2 + 0.3);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                
+                oscillator.start(startTime + index * 0.2);
+                oscillator.stop(startTime + index * 0.2 + 0.3);
+            });
+        }
+
+        const config = { /* ... Config permanece igual ... */
+             width: 0, height: 0, gravityConstant: 20000, basePlanetRadius: 35, radiusVariance: 15, basePlanetMass: 1000, shipSize: 15, targetRadius: 20, aimingLineColor: 'rgba(255, 255, 100, 0.7)', trailColors: [ '#FF4136', '#FF851B', '#FFDC00', '#FFFFFF', '#7FDBFF', '#0074D9' ], trailLength: 60, timeStep: 1 / 60, maxAttempts: 5, resultDelay: 1500, maxScore: 5000, scorePenaltyMultiplier: 10, highScoreKey: 'gravitySlingHighScore', lastDateKey: 'gravitySlingLastDate', massDifficultyWeight: 0.4, distanceDifficultyWeight: 0.6, attemptBonusValue: 250, comboBonusMultiplier: 100, attemptIndicatorSize: 10, attemptIndicatorSpacing: 5, attemptIndicatorStartX: 20, attemptIndicatorStartY: 20, attemptIndicatorColor: '#e0e0e0', attemptIndicatorLineWidth: 1.5,
+         };
+        let canvasDiagonal = 0;
+
+        // --- Mensajes aleatorios (Traducidos) ---
+        const messages = {
+            success: [
+                "¡Objetivo adquirido, buen disparo!",
+                "¡Asistencia gravitacional perfecta!",
+                "Trayectoria nominal, misión cumplida.",
+                "¡Órbita perfectamente fluida!",
+                "¡Bienvenido al nuevo mundo!"
+            ],
+            crash: [
+                "¡Como una polilla a la llama! ¡Imprudente!",
+                "¡Gravedad planetaria demasiado fuerte, estamos atrapados!",
+                "¡Brecha en el casco! ¡Eyección... fallida!",
+                "Más suerte en otra vida, pequeño.",
+                "Aterrizaje brusco, no exactamente lo planeado."
+            ],
+            lost: [
+                "Perdido en el océano de estrellas...",
+                "¡Motor de salto defectuoso, coordenadas perdidas!",
+                "En el espacio, nadie puede oírte gritar.",
+                "Cariño, es un viaje sin retorno...",
+                "Desviación mayor de trayectoria. Fuera de curso."
+            ],
+            timeout: [
+                "Combustible agotado. Convertido en botella cósmica a la deriva.",
+                "¡Anomalía temporal detectada! ¡Estamos atrapados!",
+                "Estar solo así, no está tan mal después de todo...",
+                "Convertido en un satélite llamado Adoc.", // Referencia conservada
+                "Tengo un mal presentimiento..."
+            ]
+        };
+
+        // --- Variables de Estado --- (Permanecen igual)
+        let gameState = 'splash'; let ship = {}; let planet = {}; let target = {}; let aiming = { active: false, startX: 0, startY: 0, endX: 0, endY: 0 }; let trail = []; let simulationTime = 0; let currentPlanetAttempts = config.maxAttempts; let lastLaunchSpeed = 0; let defaultShipAngle = -Math.PI / 2; let gameInitialized = false; let initialDistanceToTarget = 0; let sessionHighScore = 0; let persistentHighScore = 0; let currentDateString = ''; let lastAttemptSuccess = false; let cumulativeScore = 0; let successCombo = 0; let targetVisualState = { rotation: 0, pulse: 0 };
+
+        // --- Funciones de utilidad y puntuación alta --- (Permanecen igual, logs de consola traducidos)
+        function mapRange(value, inMin, inMax, outMin, outMax) { return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin); } function distance(x1, y1, x2, y2) { return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2); } function angle(x1, y1, x2, y2) { return Math.atan2(y2 - y1, x2 - x1); } function getFormattedDate(date) { const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, '0'); const day = String(date.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
+        function initializeScoreSystem() { currentDateString = getFormattedDate(new Date()); let lastSavedDate = null; let loadedScore = 0; try { lastSavedDate = localStorage.getItem(config.lastDateKey); const storedScore = localStorage.getItem(config.highScoreKey); loadedScore = parseInt(storedScore, 10) || 0; } catch (e) { console.error("No se pueden cargar datos desde localStorage:", e); lastSavedDate = null; loadedScore = 0; } if (lastSavedDate !== currentDateString) { console.log(`Nuevo día detectado (o primera partida). Reiniciando récord diario. Hoy: ${currentDateString}, Último guardado: ${lastSavedDate}`); persistentHighScore = 0; saveData(persistentHighScore, currentDateString); } else { persistentHighScore = loadedScore; console.log(`Mismo día. Récord cargado: ${persistentHighScore}`); } sessionHighScore = persistentHighScore; updateHighScoreDisplay(); } function saveData(score, dateStr) { try { localStorage.setItem(config.highScoreKey, score.toString()); localStorage.setItem(config.lastDateKey, dateStr); console.log(`Puntuación guardada: ${score}, Fecha: ${dateStr}`); } catch (e) { console.error("No se pueden guardar datos en localStorage:", e); } } function updateHighScoreDisplay() { uiHighScoreValue.textContent = sessionHighScore; } function checkAndSetHighScore(newScore) { let updated = false; if (newScore > sessionHighScore) { sessionHighScore = newScore; updateHighScoreDisplay(); updated = true; if (sessionHighScore > persistentHighScore) { persistentHighScore = sessionHighScore; saveData(persistentHighScore, currentDateString); } } return updated; }
+
+        // --- Establecer tamaño del canvas --- (Permanece igual)
+        function setCanvasSize() { try { const containerRect = gameContainer.getBoundingClientRect(); const w = containerRect.width; const h = containerRect.height; config.width = Math.max(150, Math.round(w || 150)); config.height = Math.max(150, Math.round(h || 150)); canvas.width = config.width; canvas.height = config.height; canvasDiagonal = distance(0, 0, config.width, config.height); console.log(`Tamaño del canvas establecido a: ${config.width}x${config.height}`); if (gameInitialized || gameState === 'aiming') { draw(); } else if (gameState === 'splash') { ctx.fillStyle = '#1c1f33'; ctx.fillRect(0, 0, config.width, config.height); } } catch (error) { console.error("Error al establecer el tamaño del canvas:", error); canvas.width = config.width = 300; canvas.height = config.height = 400; canvasDiagonal = distance(0, 0, config.width, config.height); } }
+
+        // --- Funciones de configuración del juego --- (Permanecen igual, log de consola traducido)
+        function setupNewPlanet() { /* ... */ const radius = config.basePlanetRadius + (Math.random() - 0.5) * 2 * config.radiusVariance; const massScale = Math.pow(radius / config.basePlanetRadius, 2.5); const mass = config.basePlanetMass * massScale; planet = { x: config.width / 2 + (Math.random() - 0.5) * 100, y: config.height / 2 + (Math.random() - 0.5) * 100, radius: radius, mass: mass, color: getColorForPlanet(radius, config.basePlanetRadius - config.radiusVariance, config.basePlanetRadius + config.radiusVariance), gravity: config.gravityConstant * mass }; const targetAngle = Math.random() * Math.PI * 2; const targetDist = planet.radius + 100 + Math.random() * 120; target = { x: planet.x + Math.cos(targetAngle) * targetDist, y: planet.y + Math.sin(targetAngle) * targetDist, radius: config.targetRadius, achieved: false }; target.x = Math.max(config.targetRadius*1.5, Math.min(config.width - config.targetRadius*1.5, target.x)); target.y = Math.max(config.targetRadius*1.5, Math.min(config.height - config.targetRadius*1.5, target.y)); }
+        function getColorForPlanet(radius, minRadius, maxRadius) { /* ... */ const hue = mapRange(radius, minRadius, maxRadius, 180, 0); const saturation = mapRange(radius, minRadius, maxRadius, 40, 60); const lightness = mapRange(radius, minRadius, maxRadius, 75, 65); return `hsl(${hue.toFixed(0)}, ${saturation.toFixed(0)}%, ${lightness.toFixed(0)}%)`; }
+        function resetShipState() { /* ... texto actualizado ... */ gameState = 'aiming'; uiStatus.textContent = 'Listo para apuntar'; messageDiv.style.display = 'none'; messageDiv.className = ''; trail = []; simulationTime = 0; target.achieved = false; ship = { x: 50 + Math.random() * 30, y: config.height - 50 - Math.random() * 30, vx: 0, vy: 0, radius: config.shipSize * 0.3, size: config.shipSize, color: '#E0E0E0', angle: defaultShipAngle }; aiming.active = false; updateAimingInfo(0, 0); }
+        function setupNextChallenge() { /* ... log actualizado ... */ setupNewPlanet(); currentPlanetAttempts = config.maxAttempts; resetShipState(); initialDistanceToTarget = distance(ship.x, ship.y, target.x, target.y); console.log("Nuevo desafío: Dist=", initialDistanceToTarget.toFixed(1), "Masa=", planet.mass.toFixed(0)); }
+        function initializeGame() { /* ... log actualizado ... */ console.log("Inicializando juego..."); initializeScoreSystem(); setupNextChallenge(); gameInitialized = true; }
+
+        // --- Manejo de entrada --- (Permanece igual, log de consola traducido)
+        function handleMouseDown(event) { /* ... log actualizado ... */ if (gameState === 'result' && lastAttemptSuccess) { console.log("Clic detectado en estado de resultado (éxito), preparando próximo desafío."); setupNextChallenge(); return; } if (gameState === 'splash') { startGame(); return; } if (gameState !== 'aiming') return; event.preventDefault(); const pos = getEventPosition(event); if (!pos) return; if (distance(pos.x, pos.y, ship.x, ship.y) < ship.size * 2.5) { aiming.startX = ship.x; aiming.startY = ship.y; aiming.active = true; aiming.endX = pos.x; aiming.endY = pos.y; } }
+        function handleMouseMove(event) { /* ... */ if (!aiming.active) return; event.preventDefault(); const pos = getEventPosition(event); if (!pos) return; aiming.endX = pos.x; aiming.endY = pos.y; const dx = aiming.endX - aiming.startX; const dy = aiming.endY - aiming.startY; const dist = distance(0, 0, dx, dy); const launchAngle = angle(aiming.startX, aiming.startY, aiming.endX, aiming.endY); const launchSpeed = Math.min(dist * 1.5, 350); updateAimingInfo(launchAngle, launchSpeed); }
+        function handleMouseUp(event) { /* ... texto actualizado ... */ if (gameState === 'splash' || !aiming.active) return; event.preventDefault(); aiming.active = false; const dx = aiming.endX - aiming.startX; const dy = aiming.endY - aiming.startY; const dist = distance(0, 0, dx, dy); if (dist < 5) { updateAimingInfo(0, 0); return; } const launchAngle = angle(aiming.startX, aiming.startY, aiming.endX, aiming.endY); const launchSpeed = Math.min(dist * 1.5, 350); lastLaunchSpeed = launchSpeed; ship.vx = launchSpeed * Math.cos(launchAngle); ship.vy = launchSpeed * Math.sin(launchAngle); ship.angle = launchAngle; gameState = 'simulating'; uiStatus.textContent = 'En vuelo...'; trail = [{x: ship.x, y: ship.y}]; }
+        function getEventPosition(event) { /* ... */ const rect = canvas.getBoundingClientRect(); let clientX, clientY; if (event.touches && event.touches.length > 0) { clientX = event.touches[0].clientX; clientY = event.touches[0].clientY; } else if (event.changedTouches && event.changedTouches.length > 0) { clientX = event.changedTouches[0].clientX; clientY = event.changedTouches[0].clientY;} else { clientX = event.clientX; clientY = event.clientY; } if (clientX === undefined || clientY === undefined) { return null; } return { x: clientX - rect.left, y: clientY - rect.top }; }
+        function updateAimingInfo(radAngle, speed) { /* ... */ uiSpeed.textContent = speed.toFixed(1); const degAngle = ((radAngle * 180 / Math.PI) + 360) % 360; uiAngle.textContent = degAngle.toFixed(1); }
+        // Event Listeners (Remove reset button listener)
+        canvas.addEventListener('mousedown', handleMouseDown); canvas.addEventListener('mousemove', handleMouseMove); canvas.addEventListener('mouseup', handleMouseUp); canvas.addEventListener('touchstart', handleMouseDown, { passive: false }); canvas.addEventListener('touchmove', handleMouseMove, { passive: false }); canvas.addEventListener('touchend', handleMouseUp);
+        splashScreen.addEventListener('click', startGame); splashScreen.addEventListener('touchend', startGame);
+        function startGame() { if (gameState === 'splash') { console.log("Iniciando juego..."); bodyElement.classList.add('game-active'); splashScreen.style.display = 'none'; setCanvasSize(); if (!gameInitialized) { initializeGame(); } else { // Reiniciar puntuación al volver a jugar cumulativeScore = 0; successCombo = 0; setupNextChallenge(); } } }
+
+        // --- Actualización de simulación --- (Permanece igual, texto actualizado)
+        function update(dt) { /* ... texto actualizado ... */ if (gameState !== 'simulating') return; simulationTime += dt; targetVisualState.rotation += dt * 0.8; targetVisualState.pulse = Math.sin(simulationTime * 4); const dxPlanet = planet.x - ship.x; const dyPlanet = planet.y - ship.y; const distSq = Math.max(dxPlanet * dxPlanet + dyPlanet * dyPlanet, (planet.radius*0.5)**2); const distPlanet = Math.sqrt(distSq); if (distPlanet < planet.radius + ship.radius) { handleAttemptEnd(false, "crash"); return; } if (ship.x < -ship.size*2 || ship.x > config.width + ship.size*2 || ship.y < -ship.size*2 || ship.y > config.height + ship.size*2) { handleAttemptEnd(false, "lost"); return; } if (simulationTime > 30) { handleAttemptEnd(false, "timeout"); return; } const forceMagnitude = planet.gravity / distSq; const accelX = forceMagnitude * dxPlanet / distPlanet; const accelY = forceMagnitude * dyPlanet / distPlanet; ship.vx += accelX * dt; ship.vy += accelY * dt; ship.x += ship.vx * dt; ship.y += ship.vy * dt; if (Math.abs(ship.vx) > 0.1 || Math.abs(ship.vy) > 0.1) { ship.angle = Math.atan2(ship.vy, ship.vx); } if (trail.length === 0 || distance(ship.x, ship.y, trail[trail.length-1].x, trail[trail.length-1].y) > 2) { trail.push({ x: ship.x, y: ship.y }); if (trail.length > config.trailLength) { trail.shift(); } } if (!target.achieved && distance(ship.x, ship.y, target.x, target.y) < target.radius) { target.achieved = true; handleAttemptEnd(true, "success"); return; } }
+
+        // --- Cálculo del factor de dificultad --- (Permanece igual)
+        function calculateDifficultyFactor() { /* ... */ let factor = 1.0; const massRatio = planet.mass / config.basePlanetMass; factor += (Math.sqrt(massRatio) - 1.0) * config.massDifficultyWeight; const distanceRatio = initialDistanceToTarget / canvasDiagonal; factor += distanceRatio * config.distanceDifficultyWeight; return Math.max(0.8, factor); }
+
+        // --- Manejar fin de intento (Texto actualizado) ---
+        function handleAttemptEnd(success, resultType) {
+            if (gameState !== 'simulating') return;
+            gameState = 'result';
+            lastAttemptSuccess = success;
+            
+            // Control de audio
+            if (success) {
+                // Reproducir sonido de victoria (trompetas)
+                playVictorySound();
+            } else {
+                // Reproducir sonido de muerte
+                playDeathSound();
+            }
+
+            let baseMsg = messages[resultType][Math.floor(Math.random() * messages[resultType].length)];
+            let finalMsg = "";
+            let newHighScoreAchieved = false;
+
+            if (success) {
+                uiStatus.textContent = '¡Éxito!'; // Traducido
+                const difficultyFactor = calculateDifficultyFactor();
+                const potentialMaxScore = config.maxScore * difficultyFactor;
+                const efficiencyScore = Math.max(0, Math.round(potentialMaxScore - lastLaunchSpeed * config.scorePenaltyMultiplier));
+                const attemptBonus = Math.max(0, (currentPlanetAttempts - 1)) * config.attemptBonusValue;
+                const comboBonus = successCombo * config.comboBonusMultiplier;
+                const currentAttemptScore = efficiencyScore + attemptBonus + comboBonus;
+                successCombo++;
+                cumulativeScore += currentAttemptScore;
+                newHighScoreAchieved = checkAndSetHighScore(cumulativeScore);
+
+                // Mensaje de éxito formateado
+                finalMsg = `${baseMsg}\n✨ +${currentAttemptScore} (Combo ${successCombo}x)\nPuntuación Total: ${cumulativeScore}\n⏱️ ${simulationTime.toFixed(1)}s | Coste ${lastLaunchSpeed.toFixed(1)}`;
+                if (newHighScoreAchieved && cumulativeScore > 0) { finalMsg += ` (¡Nuevo Récord!)`; } // Traducido
+                finalMsg += `\n\nHaz clic en cualquier lugar para continuar...`; // Traducido
+                messageDiv.className = 'success';
+                // No hay avance automático
+
+            } else { // Lógica de fracaso
+                currentPlanetAttempts--;
+                uiStatus.textContent = 'Fallo'; // Traducido
+                messageDiv.className = 'failure';
+                finalMsg = baseMsg; // Muestra solo el mensaje aleatorio de fallo
+
+                if (currentPlanetAttempts > 0) {
+                     finalMsg += `\n(Intentos restantes: ${currentPlanetAttempts})`; // Traducido
+                     setTimeout(resetShipState, config.resultDelay);
+                } else {
+                    finalMsg += `\n(¡Sin más intentos! Puntuación reiniciada. Hacia un nuevo planeta...)`; // Traducido
+                    cumulativeScore = 0;
+                    successCombo = 0;
+                    checkAndSetHighScore(cumulativeScore); // Actualiza la visualización si es necesario
+                    setTimeout(setupNextChallenge, config.resultDelay + 1000);
+                }
+            }
+             messageDiv.textContent = finalMsg; messageDiv.style.display = 'block';
+        }
+
+
+        // --- Dibujo --- (Permanece igual)
+        function draw() { /* ... */ if (gameState === 'splash') { return; } if (!gameInitialized) return; ctx.fillStyle = '#1c1f33'; ctx.fillRect(0, 0, config.width, config.height); ctx.strokeStyle = config.attemptIndicatorColor; ctx.lineWidth = config.attemptIndicatorLineWidth; const triSizeInd = config.attemptIndicatorSize; const triSpacing = config.attemptIndicatorSpacing; const triYInd = config.attemptIndicatorStartY; const totalAttemptsWidth = currentPlanetAttempts * triSizeInd + Math.max(0, currentPlanetAttempts - 1) * triSpacing; const startXInd = config.width - config.attemptIndicatorStartX - totalAttemptsWidth; for (let i = 0; i < currentPlanetAttempts; i++) { const triXInd = startXInd + i * (triSizeInd + triSpacing); ctx.beginPath(); ctx.moveTo(triXInd + triSizeInd / 2, triYInd); ctx.lineTo(triXInd, triYInd + triSizeInd * 0.866); ctx.lineTo(triXInd + triSizeInd, triYInd + triSizeInd * 0.866); ctx.closePath(); ctx.stroke(); } const planetGradient = ctx.createRadialGradient(planet.x - planet.radius * 0.3, planet.y - planet.radius * 0.3, planet.radius * 0.1, planet.x, planet.y, planet.radius); planetGradient.addColorStop(0, lightenColor(planet.color, 15)); planetGradient.addColorStop(1, planet.color); ctx.fillStyle = planetGradient; ctx.beginPath(); ctx.arc(planet.x, planet.y, planet.radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(180, 180, 200, 0.1)'; ctx.lineWidth = 1; ctx.beginPath(); const influenceRadius = planet.radius * (1 + Math.sqrt(planet.mass / config.basePlanetMass) * 1.5); ctx.arc(planet.x, planet.y, Math.min(influenceRadius, Math.max(config.width, config.height)), 0, Math.PI * 2); ctx.stroke(); ctx.save(); ctx.translate(target.x, target.y); ctx.rotate(targetVisualState.rotation); const pulseFactor = 1.0 + targetVisualState.pulse * 0.08; const baseRadius = target.radius; const gradient = ctx.createRadialGradient(0, 0, baseRadius * 0.1 * pulseFactor, 0, 0, baseRadius * 1.3 * pulseFactor); gradient.addColorStop(0, 'rgba(200, 255, 255, 0.8)'); gradient.addColorStop(0.5, 'rgba(100, 255, 240, 0.4)'); gradient.addColorStop(0.8, 'rgba(50, 180, 220, 0.2)'); gradient.addColorStop(1.0, 'rgba(30, 80, 180, 0)'); ctx.fillStyle = gradient; ctx.beginPath(); ctx.arc(0, 0, baseRadius * 1.3 * pulseFactor, 0, Math.PI * 2); ctx.fill(); const innerSize = baseRadius * 0.6; ctx.beginPath(); ctx.moveTo(0, -innerSize * pulseFactor); ctx.lineTo(innerSize * 0.866 * pulseFactor, innerSize * 0.5 * pulseFactor); ctx.lineTo(-innerSize * 0.866 * pulseFactor, innerSize * 0.5 * pulseFactor); ctx.closePath(); ctx.fillStyle = target.achieved ? 'rgba(255, 255, 100, 0.9)' : 'rgba(100, 255, 240, 0.9)'; ctx.fill(); ctx.restore(); if (trail.length > 0) { ctx.beginPath(); ctx.moveTo(trail[0].x, trail[0].y); for (let i = 1; i < trail.length; i++) { ctx.lineTo(trail[i].x, trail[i].y); } ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.stroke(); for (let i = 0; i < trail.length; i++) { const trailPointSize = i === trail.length - 1 ? 3 : 1; const colorIndex = Math.floor(i / trail.length * config.trailColors.length); ctx.beginPath(); ctx.arc(trail[i].x, trail[i].y, trailPointSize, 0, Math.PI * 2); ctx.fillStyle = i === trail.length - 1 ? '#FFFFFF' : config.trailColors[colorIndex]; ctx.fill(); } } if (aiming.active) { ctx.beginPath(); ctx.moveTo(aiming.startX, aiming.startY); ctx.lineTo(aiming.endX, aiming.endY); ctx.lineWidth = 2; ctx.strokeStyle = config.aimingLineColor; ctx.stroke(); } ctx.save(); ctx.translate(ship.x, ship.y); ctx.rotate(ship.angle); ctx.beginPath(); const s = ship.size; ctx.moveTo(s, 0); ctx.lineTo(-s * 0.7, -s * 0.7); ctx.lineTo(-s * 0.4, 0); ctx.lineTo(-s * 0.7, s * 0.7); ctx.closePath(); const shipGradient = ctx.createLinearGradient(-s * 0.7, 0, s, 0); shipGradient.addColorStop(0, '#a0a0a0'); shipGradient.addColorStop(1, ship.color); ctx.fillStyle = shipGradient; ctx.fill(); ctx.restore(); }
+        function hexToRgb(hex) { /* ... */ const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null; }
+        function lightenColor(colorString, amount) { /* ... log actualizado ... */ try { if (colorString.startsWith('hsl')) { let parts = colorString.match(/hsl\((\d+),\s*([\d.]+)%,\s*([\d.]+)%\)/); if (parts) { let h = parseInt(parts[1]); let s = parseFloat(parts[2]); let l = Math.min(100, parseFloat(parts[3]) + amount); return `hsl(${h}, ${s}%, ${l}%)`; } } else if (colorString.startsWith('#')) { let col = parseInt(colorString.slice(1), 16); let r = Math.min(255, (col >> 16) + amount); let g = Math.min(255, ((col >> 8) & 0x00FF) + amount); let b = Math.min(255, (col & 0x0000FF) + amount); return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).padStart(6, '0')}`; } } catch(e) { console.error("Error al aclarar el color:", e); } return colorString; }
+
+        // --- Bucle de juego e inicialización ---
+        let lastTime = 0; function gameLoop(timestamp) { const deltaTime = (timestamp - lastTime) / 1000 || 0; lastTime = timestamp; const dt = Math.min(deltaTime, config.timeStep * 3); if (gameState === 'simulating') { update(dt); } draw(); requestAnimationFrame(gameLoop); }
+        window.addEventListener('resize', setCanvasSize);
+        window.addEventListener('load', () => { setCanvasSize(); });
+        requestAnimationFrame(gameLoop);
+
+    </script>
+</body>
+</html>
